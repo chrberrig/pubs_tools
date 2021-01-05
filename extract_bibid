@@ -1,0 +1,32 @@
+#!/bin/sh
+# This script takes a single pdf-file argument and attempts extraction of bibliograpic identier. 
+# This identifier, along the identifier type, is given as output.
+[ -z "$1" -o ! -f "$1" ] && echo "Give either a valid pdf file as an argument." && exit 1
+[ -f "$1" ] && file="${1}"
+
+# bibid_types="doi:\nhttps://dx.doi.org/\narxiv:\nisbn:"
+bibid_types="doi\narxiv\nisbn"
+
+check_for_id(){
+echo "${bibid_types}" | while read iden_type; do
+	# Try to get Identifier and ID.type from pdfinfo or pdftotext output.
+	# while loop is executed in subshell
+	id="$(pdfinfo "${file}" | grep -io -P "${iden_type}:(\s)?[^\s]*")" || 
+	id="$(pdftotext "${file}" 2>/dev/null - | grep -io -P "${iden_type}:(\s)?[^\s]*" -m 1)" 
+	# || echo "no ${iden_type} found" 
+	# [ ! -z "$id" ] && id_type="${iden_type}" && echo "${id_type} ${id}" && break 
+	# [ ! -z "$id" ] && id="$(echo "${id}" | sed "s/${iden_type}//g")" && echo "${iden_type}:${id}" && break 
+	[ ! -z "$id" ] && echo "${id}" && break 
+done 
+}
+id_type="$(check_for_id | cut -d ":" -f1 | tr "[[:upper:]]" "[[:lower:]]")"
+id="$(check_for_id | cut -d ":" -f2 | sed "s/[\.|\)]*[[:space:]]*$//gm")"
+file="$(pwd)/${file}"
+
+# Output:
+[ -z "${id}" ] && echo "No ID found" && exit 1 
+# echo "$id_type"
+# echo "$id"
+# echo "$id"
+pubs add --${id_type} ${id} -d ${file}
+
