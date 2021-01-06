@@ -29,13 +29,13 @@ done
 }
 id_str="$(check_for_id)"
 id_type="$(echo "${id_str}" | cut -d ":" -f1 | tr "[[:upper:]]" "[[:lower:]]")"
-id="$(echo "${id_str}" | sed "s/^${id_type}:[[:space:]]*//gm; s/[\.|\)|\;]*[[:space:]]*$//gm")"
+id="$(echo "${id_str}" | sed "s/^${id_type}:[[:space:]]*//gmi; s/[\.|\)|\;]*[[:space:]]*$//gm")"
 file="$(pwd)/${file}"
 
 # Output:
 [ -z "${id}" ] && echo "No ID found" && exit 1 
- pubs add --${id_type} ${id} -d ${file}
-
+echo "${id_type}: ${id}"
+pubs add --${id_type} ${id} -d ${file}
 
 
 
