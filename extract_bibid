@@ -9,24 +9,41 @@ bibid_types="doi\narxiv\nisbn"
 
 check_for_id(){
 echo "${bibid_types}" | while read iden_type; do
-	# Try to get Identifier and ID.type from pdfinfo or pdftotext output.
+	# Try to get Identifier and ID type from pdfinfo or pdftotext output.
 	# while loop is executed in subshell
-	id="$(pdfinfo "${file}" | grep -io -P "${iden_type}:(\s)?[^\s]*")" || 
-	id="$(pdftotext "${file}" 2>/dev/null - | grep -io -P "${iden_type}:(\s)?[^\s]*" -m 1)" 
-	# || echo "no ${iden_type} found" 
-	# [ ! -z "$id" ] && id_type="${iden_type}" && echo "${id_type} ${id}" && break 
-	# [ ! -z "$id" ] && id="$(echo "${id}" | sed "s/${iden_type}//g")" && echo "${iden_type}:${id}" && break 
-	[ ! -z "$id" ] && echo "${id}" && break 
+	
+	presch_str="${iden_type}\(:\|\/\|\.org\/\)\([[:space:]]\)\?"
+	# presch_str="\(https:\/\/\)\?${iden_type}\(:\|\/\|\.org\/\)\([[:space:]]\)\?" # [[:blank:]]?
+	sch_str="${presch_str}[^@[:space:]]*"
+	
+	###
+	
+	id="$(pdfinfo "${file}" | grep -io -e "${sch_str}")" ||
+	id="$(pdftotext "${file}" 2>/dev/null - | grep -io -e "${sch_str}" -m 1)"
+	
+		
+	[ ! -z "${id}" ] && echo "${id}" && break 
+	
+
 done 
 }
-id_type="$(check_for_id | cut -d ":" -f1 | tr "[[:upper:]]" "[[:lower:]]")"
-id="$(check_for_id | cut -d ":" -f2 | sed "s/[\.|\)]*[[:space:]]*$//gm")"
+id_str="$(check_for_id)"
+id_type="$(echo "${id_str}" | cut -d ":" -f1 | tr "[[:upper:]]" "[[:lower:]]")"
+id="$(echo "${id_str}" | sed "s/^${id_type}:[[:space:]]*//gm; s/[\.|\)|\;]*[[:space:]]*$//gm")"
 file="$(pwd)/${file}"
 
 # Output:
 [ -z "${id}" ] && echo "No ID found" && exit 1 
-# echo "$id_type"
-# echo "$id"
-# echo "$id"
-pubs add --${id_type} ${id} -d ${file}
+ pubs add --${id_type} ${id} -d ${file}
 
+
+
+
+# place at ###
+	# Maybe generalizable using code below. Pre-search string gives odd newline....
+	# pre_id="$(pdfinfo "${file}" | grep -io -e "${presch_str}")" || 
+	# pre_id="$(pdftotext "${file}" 2>/dev/null - | grep -io -e "${presch_str}" -m 1)"
+	# ed_str="s/^${iden_type}:[[:space:]]*//gm; s/[\.|\)|\;]*[[:space:]]*$//gm"
+	# id="$(echo "${id}" | sed ${ed_str})"
+	# pre_id="$(echo "${pre_id}" | sed "s/\n//mg" | sed "${ed_str}")"
+	# id="$(echo "${id}" | sed "s/${pre_id}//mg")"
